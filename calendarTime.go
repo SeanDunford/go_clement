@@ -78,7 +78,7 @@ func (c CalendarTime) absTimeDiff(c2 CalendarTime) (int, bool) {
 	return timediff, overflow
 }
 
-// calendaraTime.addTime really should mutate itself or be called something different
+// TODO: calendaraTime.addTime really should mutate itself or be called something different
 
 func (c CalendarTime) addTime(mins int) CalendarTime {
 	newRawValue := c.rawMinValue + mins
@@ -152,8 +152,26 @@ func NewCalendarTimeFromMilitaryStr(miltaryTime string) CalendarTime {
 	return NewCalendarTime(hour, min, miltaryTime)
 }
 
+func amPm(militaryHour int) string {
+	amPm := "PM"
+	if militaryHour < 12 {
+		amPm = "AM"
+	}
+
+	return amPm
+}
+
+func (c CalendarTime) humanReadable() string {
+	hour := c.hour % 12
+	if hour == 0 {
+		hour = 12
+	}
+
+	return fmt.Sprintf("%02d:%02d %v", hour, c.minute, amPm(c.hour))
+}
+
 func (c CalendarTime) print() {
-	fmt.Printf("CalendarTime: %v\n", c)
+	fmt.Printf(c.humanReadable())
 }
 
 func (c CalendarTime) similarTo(c2 CalendarTime) bool {

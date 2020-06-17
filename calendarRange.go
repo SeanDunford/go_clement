@@ -110,12 +110,12 @@ func NewCalendarRangeAfterNoon() CalendarRange {
 	)
 }
 
-func (c CalendarRange) print() {
-	fmt.Printf("CalendarRange: %v\n", c)
+func (c CalendarRange) humanReadable() string {
+	return fmt.Sprintf("%v-%v", c.begin.humanReadable(), c.end.humanReadable())
 }
 
-func (c CalendarRange) findCalendarRange(duration int) {
-
+func (c CalendarRange) print() {
+	fmt.Printf(c.humanReadable())
 }
 
 func (c CalendarRange) similarTo(c2 CalendarRange) bool {
@@ -124,4 +124,40 @@ func (c CalendarRange) similarTo(c2 CalendarRange) bool {
 
 func mergeEventArrays(c1 []CalendarRange, c2 []CalendarRange) []CalendarRange {
 	return []CalendarRange{}
+}
+
+func ChunkAvailability(availiability []CalendarRange, duration, maxChunks int) []CalendarRange {
+	// TODO: I want to use make([]CalendarRange, maxChunks) but i need it to be intialized with undefined? Is that a thing?
+	chunkedAvailability := []CalendarRange{}
+	counter := 0
+
+	for _, currentEvent := range availiability {
+		if counter >= maxChunks {
+			break
+		}
+		runner := currentEvent.begin
+		diff, overflow := runner.absTimeDiff(currentEvent.end)
+		if overflow {
+			fmt.Errorf("Seems like you overflowed into the next day")
+		}
+
+		for diff >= duration {
+			if counter >= maxChunks {
+				break
+			}
+			end := runner.addTime(duration)
+			chunkedAvailability = append(chunkedAvailability, NewCalendarRangeFor2Times(runner, end))
+
+			// re-initialize for next iteration
+			runner = end
+			counter++
+			diff, overflow = runner.absTimeDiff(currentEvent.end)
+			if overflow {
+				fmt.Errorf("Seems like you overflowed into the next day")
+			}
+		}
+
+	}
+
+	return chunkedAvailability
 }

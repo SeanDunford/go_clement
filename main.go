@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"strings"
 )
 
 func clampMeetingTime(meetingTimesMins int) int { // better way to do this?
@@ -27,35 +29,60 @@ func find3Times(meetingTimeMins int,
 
 }
 
+func parseMilitaryPairStr(militaryStrPair string) CalendarRange {
+	eventTimes := strings.Split(militaryStrPair, "-")
+	return NewCalendarRangeFromMilitaryStrings(eventTimes[0], eventTimes[1])
+}
+
+func parseScheduleFlag(scheduleStr string) []CalendarRange {
+	scheduleStrArr := strings.Split(scheduleStr, ",")
+	result := make([]CalendarRange, len(scheduleStrArr))
+
+	for index, strCalendarRange := range scheduleStrArr {
+		result[index] = parseMilitaryPairStr(strCalendarRange)
+	}
+
+	return result
+}
+
 func main() {
-	sean := NewSchedule(
-		"sean",
-		[]CalendarRange{
-			NewCalendarRangeFromMilitaryStrings("10:00", "11:30"),
-			NewCalendarRangeFromMilitaryStrings("12:30", "14:30"),
-			NewCalendarRangeFromMilitaryStrings("14:30", "15:00"),
-		},
-		NewCalendarRangeFromMilitaryStrings("9:00", "20:00"),
-	)
-	sean.print()
-	clement := NewSchedule(
-		"clement",
-		[]CalendarRange{
-			NewCalendarRangeFromMilitaryStrings("10:00", "11:30"),
-			NewCalendarRangeFromMilitaryStrings("12:30", "14:30"),
-			NewCalendarRangeFromMilitaryStrings("14:30", "15:00"),
-		},
-		NewCalendarRangeFromMilitaryStrings("9:00", "20:00"),
-	)
-	clement.print()
+	meetingTime := *flag.Int("meetingTime", 30, "Duration of the meeting time we hope to find")
+	maxChunks := *flag.Int("maxSuggestions", 3, "Maximum number of suggestions you would like")
+	s1Name := *flag.String("s1Name", "s1", "Name of first schedule")
+	s2Name := *flag.String("s2Name", "s2", "Name of second schedule")
+	schedule1Str := *flag.String("schedule1", "09:30-10:00,12:00-13:00,14:00-15:00", "Schedule for first person")
+	schedule2Str := *flag.String("schedule2", "09:00-10:00,11:00-12:00,17:00-18:00", "Schedule for second person")
+	workingHours1 := *flag.String("workingHours1", "05:30-20:00", "Working Hours for first person")
+	workingHours2 := *flag.String("workingHours2", "09:00-17:00", "Woeking Hours for second person")
+	flag.Parse()
 
-	fmt.Println("We did it")
+	s1Events := parseScheduleFlag(schedule1Str)
+	s2Events := parseScheduleFlag(schedule2Str)
+	wh1 := parseMilitaryPairStr(workingHours1)
+	wh2 := parseMilitaryPairStr(workingHours2)
 
-	// seanMeetingBlocks = sean.findMeetingTimes(30)
-	// clementMeetingBlocks = clement.findMeetingTimes(30)
+	s1 := Schedule{
+		name:         s1Name,
+		events:       s1Events,
+		availability: wh1,
+	}
+	s2 := Schedule{
+		name:         s2Name,
+		events:       s2Events,
+		availability: wh2,
+	}
 
-	// overlap = seanMeetingBlocks.findOverlap(clementMeetingBlocks)
-	// slice to 3 items
-	// return
-	// format output
+	availabilityArr := FindCommonAvailability(meetingTime, s1, s2)
+
+	chunks := ChunkAvailability(availabilityArr, meetingTime, maxChunks)
+
+	s1.print()
+	s2.print()
+
+	fmt.Printf("I was able to find %v possible meeting times of %v mins long\n", len(chunks), meetingTime)
+	for _, suggestedTime := range chunks {
+		fmt.Printf("\t%v\n", suggestedTime.humanReadable())
+	}
+
+	fmt.Println("\n\nfin")
 }
