@@ -1,9 +1,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"log"
+	"os"
 	"strings"
+
+	"github.com/urfave/cli"
 )
 
 func clampMeetingTime(meetingTimesMins int) int { // better way to do this?
@@ -45,33 +48,7 @@ func parseScheduleFlag(scheduleStr string) []CalendarRange {
 	return result
 }
 
-func main() {
-	meetingTime := *flag.Int("meetingTime", 30, "Duration of the meeting time we hope to find")
-	maxChunks := *flag.Int("maxSuggestions", 3, "Maximum number of suggestions you would like")
-	s1Name := *flag.String("s1Name", "s1", "Name of first schedule")
-	s2Name := *flag.String("s2Name", "s2", "Name of second schedule")
-	schedule1Str := *flag.String("schedule1", "09:30-10:00,12:00-13:00,14:00-15:00", "Schedule for first person")
-	schedule2Str := *flag.String("schedule2", "09:00-10:00,11:00-12:00,17:00-18:00", "Schedule for second person")
-	workingHours1 := *flag.String("workingHours1", "05:30-20:00", "Working Hours for first person")
-	workingHours2 := *flag.String("workingHours2", "09:00-17:00", "Woeking Hours for second person")
-	flag.Parse()
-
-	s1Events := parseScheduleFlag(schedule1Str)
-	s2Events := parseScheduleFlag(schedule2Str)
-	wh1 := parseMilitaryPairStr(workingHours1)
-	wh2 := parseMilitaryPairStr(workingHours2)
-
-	s1 := Schedule{
-		name:         s1Name,
-		events:       s1Events,
-		availability: wh1,
-	}
-	s2 := Schedule{
-		name:         s2Name,
-		events:       s2Events,
-		availability: wh2,
-	}
-
+func cliActionFmt(meetingTime int, maxChunks int, s1 Schedule, s2 Schedule) {
 	availabilityArr := FindCommonAvailability(meetingTime, s1, s2)
 
 	chunks := ChunkAvailability(availabilityArr, meetingTime, maxChunks)
@@ -85,4 +62,61 @@ func main() {
 	}
 
 	fmt.Println("\n\nfin")
+}
+
+func main() {
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "print-version",
+		Aliases: []string{"V, v"},
+		Usage:   "print only the version",
+	}
+	app := &cli.App{
+		UseShortOptionHandling: true,
+		Name:                   "Go-Clement",
+		Version:                "v0.1.0",
+		EnableBashCompletion:   true,
+		Flags: []cli.Flag{
+			&cli.IntFlag{
+				Name:  "meetingTime",
+				Value: 30,
+				Usage: "Duration of the meeting time we hope to find",
+			},
+			&cli.IntFlag{
+				Name:  "maxSuggestions",
+				Value: 3,
+				Usage: "Maximum number of suggestions you would like",
+			},
+			&cli.StringFlag{Name: "s1Name", Value: "s1", Usage: "Name of first schedule"},
+			&cli.StringFlag{Name: "s2Name", Value: "s2", Usage: "Name of second schedule"},
+			&cli.StringFlag{Name: "schedule1", Value: "09:30-10:00,12:00-13:00,14:00-15:00", Usage: "Schedule for first person"},
+			&cli.StringFlag{Name: "schedule2", Value: "09:00-10:00,11:00-12:00,17:00-18:00", Usage: "Schedule for second person"},
+			&cli.StringFlag{Name: "workingHours1", Value: "05:30-20:00", Usage: "Working Hours for first person"},
+			&cli.StringFlag{Name: "workingHours2", Value: "09:00-17:00", Usage: "Working Hours for second person"},
+		},
+	}
+	app.Commands = []*cli.Command{
+		{
+			Name:    "findMeetingTime",
+			Aliases: []string{"fmt"},
+			Usage:   "Find a meeting time for 2 different schedules",
+			Action: func(c *cli.Context) error {
+				s1 := Schedule{
+					name:         c.String("s1Name"),
+					events:       parseScheduleFlag(c.String("schedule1Str")),
+					availability: parseMilitaryPairStr(c.String("workingHours1")),
+				}
+				s2 := Schedule{
+					name:         c.String("s2Name"),
+					events:       parseScheduleFlag(c.String("schedule2Str")),
+					availability: parseMilitaryPairStr(c.String("workingHours2")),
+				}
+				cliActionFmt(c.Int("meetingTime"), c.Int("maxSuggestions"), s1, s2)
+				return nil
+			},
+		},
+	}
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
