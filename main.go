@@ -72,8 +72,8 @@ func main() {
 	}
 	app := &cli.App{
 		UseShortOptionHandling: true,
-		Name:                   "Go-Clement",
-		Version:                "v0.1.0",
+		Name:                   "clement",
+		Version:                "v0.1.1",
 		EnableBashCompletion:   true,
 		Flags: []cli.Flag{
 			&cli.IntFlag{
@@ -102,12 +102,12 @@ func main() {
 			Action: func(c *cli.Context) error {
 				s1 := Schedule{
 					name:         c.String("s1Name"),
-					events:       parseScheduleFlag(c.String("schedule1Str")),
+					events:       parseScheduleFlag(c.String("schedule1")),
 					availability: parseMilitaryPairStr(c.String("workingHours1")),
 				}
 				s2 := Schedule{
 					name:         c.String("s2Name"),
-					events:       parseScheduleFlag(c.String("schedule2Str")),
+					events:       parseScheduleFlag(c.String("schedule2")),
 					availability: parseMilitaryPairStr(c.String("workingHours2")),
 				}
 				cliActionFmt(c.Int("meetingTime"), c.Int("maxSuggestions"), s1, s2)
